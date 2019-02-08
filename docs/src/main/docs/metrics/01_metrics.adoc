@@ -16,22 +16,23 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-= Metrics and Health Support
-:description: Helidon Reactive WebServer metrics and health support
-:keywords: helidon, reactive, reactive streams, reactive java, reactive webserver, metrics
+= Metrics
+:description: Helidon metrics
+:keywords: helidon, metrics
 
-== Metrics Support
-Helidon WebServer includes support for MicroProfile Metrics. MicroProfile
-Metrics has a variety of metric types and two reporting formats that
-are exposed at the `/metrics` endpoint.
+Helidon SE provides the following to support metrics:
+
+1. The endpoint `/metrics`: A configurable endpoint that exposes metrics information in JSON format (as specified by the
+    MicroProfile Metrics specification) or in plain text (for Prometheus metrics).
+2. A base set of metrics, available at `/metrics/base`, as specified by the MicroProfile Metrics specification.
+3. A set of Helidon-specific metrics, available at `/metrics/vendor`
 
 
-=== Prerequisites
+== Prerequisites
 
 Declare the following dependency in your project:
 
 [source,xml,subs="verbatim,attributes"]
-.Webserver Metrics Dependency
 ----
     <dependency>
         <groupId>io.helidon.metrics</groupId>
@@ -39,14 +40,13 @@ Declare the following dependency in your project:
     </dependency>
 ----
 
-=== Using Metrics in Your Application
+== Using Metrics in Your Application
 To enable Metrics, register it with the WebServer.
 
 [source,java]
-.Configuring Metrics in WebServer
 ----
 import io.helidon.metrics.MetricsSupport;
-. . .
+//...
 
 Routing.builder()
                 .register(MetricsSupport.create())
@@ -62,7 +62,7 @@ Then you can use metrics in your service.
 import io.helidon.metrics.RegistryFactory;
 import org.eclipse.microprofile.metrics.Counter;
 import org.eclipse.microprofile.metrics.MetricRegistry;
-. . .
+//...
 
 public class MyService implements Service {
 
@@ -88,7 +88,7 @@ public class MyService implements Service {
 <2> Create a counter in that registry
 <3> Increment the counter for every request
 
-=== Accessing Metrics Endpoint
+== Accessing Metrics Endpoint
 
 Access metrics data via the `/metrics` endpoint. Two reporting formats
 are supported. The HTTP Accept header sent by the client determines
@@ -105,7 +105,7 @@ curl -s -H 'Accept: text/plain' -X GET http://localhost:8080/metrics/
 # TYPE base:classloader_total_loaded_class_count counter
 # HELP base:classloader_total_loaded_class_count Displays the total number of classes that have been loaded since the Java virtual machine has started execution.
 base:classloader_total_loaded_class_count 3157
-. . .
+#...
 ----
 
 [source,bash]
@@ -116,7 +116,7 @@ curl -s -H 'Accept: application/json' -X GET http://localhost:8080/metrics/ | js
    "base" : {
       "memory.maxHeap" : 3817865216,
       "memory.committedHeap" : 335544320,
-. . .
+#...
 ----
 
 In addition to your application metrics the reports contain other
@@ -126,72 +126,4 @@ For full details see the
 https://github.com/eclipse/microprofile-metrics/releases[MicroProfile Metrics]
 specification.
 
-
-== Implementing a Health Check
-
-The WebServer does not include a dedicated health check feature, but you
-can implement a health check by defining an appropriate endpoint. 
-
-To create a health check that runs on a separate port from your main web application:
-
-1. Define a second socket in the WebServer's configuration.
-2. Create a health service to handle requests on the socket.
-3. Add a route to the health service.
-
-[source,yaml]
-.Define a health check socket in application.yaml
-----
-server:
-  port: 8080
-  sockets:
-    health:  // <1>
-        port: 9090
-----
-
-<1> Name this socket "health"
-
-[source,java]
-.Create a health service
-----
-public class HealthCheckService implements Service {
-
-    HealthCheckService() {
-    }
-
-    @Override
-    public void update(Routing.Rules rules) {
-        rules.get("/health", this::get);
-    }
-
-    public void get(ServerRequest req, ServerResponse res) {
-        res.status(200).send();
-    }
-}
-----
-
-[source,java]
-.Define a route to the HealthCheckService service on the socket
-----
-        // By default this picks up application.yaml from the classpath
-        Config config = Config.create();
-
-        // Get WebServer config from the "server" section of application.yaml
-        ServerConfiguration serverConfig = ServerConfiguration.
-            create(config.get("server"));
-
-        WebServer server = WebServer.builder(createRouting())  //<1>
-                        .configuration(serverConfig)
-                        .addNamedRouting("health",  //<2>
-                                Routing.builder()
-                                .register(new HealthCheckService())  // <3>
-                                .build())
-                        .build();
-----
-
-<1> `createRouting()` creates a `Routing` object for your main application.
-    See the <<getting-started/02_base-example.adoc#Quickstart Examples,Quickstart examples>>.
-<2> Add routing for a named socket. This name must match the name of the socket
-    used in the WebServer configuration.
-<3> Register the health check service on that socket.
-
-You can access your health check at `host:9090/health`
+The Metrics component in Helidon SE is the core for the Helidon MP implementation of the MicroProfile Metrics specification.

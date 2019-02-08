@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2019 Oracle and/or its affiliates. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,7 @@ class MetricImplTest {
             + "\"tags\":\"a=b,c=d\"}}";
 
     private static MetricImpl impl;
+    private static MetricImpl implWithoutDescription;
 
     @BeforeAll
     public static void initClass() {
@@ -58,6 +59,23 @@ class MetricImplTest {
                                      "a=b,c=d");
 
         impl = new MetricImpl("base", meta) {
+            @Override
+            protected void prometheusData(StringBuilder sb, String name, String tags) {
+                prometheusType(sb, name, "counter");
+                prometheusHelp(sb, name);
+                sb.append(name).append(" ").append("45");
+            }
+
+            @Override
+            public void jsonData(JsonObjectBuilder builder) {
+                //TODO how with tags?
+                builder.add(getName(), 45);
+            }
+        };
+
+        meta = new Metadata("counterWithoutDescription", MetricType.COUNTER);
+
+        implWithoutDescription = new MetricImpl("base", meta) {
             @Override
             protected void prometheusData(StringBuilder sb, String name, String tags) {
                 prometheusType(sb, name, "counter");
@@ -99,6 +117,14 @@ class MetricImplTest {
                 + "# HELP base:the_name theDescription\n"
                 + "base:the_name 45";
         assertThat(impl.prometheusData(), is(expected));
+    }
+
+    @Test
+    void testPrometheusWithoutDescription() {
+        String expected = "# TYPE base:counter_without_description counter\n"
+                + "# HELP base:counter_without_description \n"
+                + "base:counter_without_description 45";
+        assertThat(implWithoutDescription.prometheusData(), is(expected));
     }
 
     @Test
