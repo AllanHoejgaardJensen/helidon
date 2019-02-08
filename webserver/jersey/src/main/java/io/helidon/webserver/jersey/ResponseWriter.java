@@ -110,29 +110,14 @@ class ResponseWriter implements ContainerResponseWriter {
     public OutputStream writeResponseStatusAndHeaders(long contentLength, ContainerResponse context)
             throws ContainerException {
 
-        //
-        // TODO also check that nothing was written an nothing was read
-        //
-        if (context.getStatus() == 404) {
-            whenHandleFinishes.thenRun(() -> {
-                LOGGER.finer("Skipping the handling and forwarding to downstream WebServer filters.");
-
-                req.next();
-            });
-            return new OutputStream() {
-                @Override
-                public void write(int b) throws IOException {
-                    // noop
-                }
-            };
-        }
-
         res.status(Http.ResponseStatus.create(context.getStatus(), context.getStatusInfo().getReasonPhrase()));
 
         if (contentLength >= 0) {
             res.headers().put(Http.Header.CONTENT_LENGTH, String.valueOf(contentLength));
         } else {
-            res.headers().put(Http.Header.TRANSFER_ENCODING, "chunked");
+            if (400 != context.getStatus()) {
+                res.headers().put(Http.Header.TRANSFER_ENCODING, "chunked");
+            }
         }
 
         for (Map.Entry<String, List<String>> entry : context.getStringHeaders().entrySet()) {

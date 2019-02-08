@@ -231,22 +231,20 @@ public class JerseySupportTest {
     @Test
     public void simpleGetNotFound() throws Exception {
         Response response = get("jersey/first/non-existent-resource");
-
         doAssert(response, "", Response.Status.NOT_FOUND);
     }
 
     @Test
     public void nonJerseyGetNotFound() throws Exception {
         Response response = get("jersey/second");
-
-        doAssert(response, "second-content: ");
+        doAssert(response, Response.Status.NOT_FOUND);
     }
 
     @Test
     public void nonJerseyPOSTNotFound() throws Exception {
         Response response = webTarget.path("jersey/second").request().post(Entity.entity("my-entity", MediaType.TEXT_PLAIN_TYPE));
-
-        doAssert(response, "second-content: my-entity");
+        doAssert(response, Response.Status.NOT_FOUND);
+        doAssert(response, "", Response.Status.NOT_FOUND);
     }
 
     @Test
@@ -313,12 +311,17 @@ public class JerseySupportTest {
                     "Unexpected error: " + response.getStatus());
             assertEquals(expected, response.readEntity(String.class));
         } finally {
-            response.close();
+           response.close();
         }
     }
 
     private void doAssert(Response response, String expectedContent, Response.StatusType status) {
         doAssert(response, expectedContent, status.getStatusCode());
+    }
+
+    private void doAssert(Response response, Response.StatusType status) {
+        assertEquals(status.getStatusCode(), response.getStatus(),
+                "Unexpected error: " + response.getStatus());
     }
 
     private void doAssert(Response response, String expectedContent, int expectedStatusCode) {
